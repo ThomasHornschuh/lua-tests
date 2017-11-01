@@ -39,7 +39,7 @@ while a < lim do
   a = math.ceil(a*1.3)
 end
 
- 
+
 local function check (t, na, nh)
   local a, h = T.querytab(t)
   if a ~= na or h ~= nh then
@@ -54,7 +54,7 @@ local s = 'return {'
 for i=1,lim do
   s = s..i..','
   local s = s
-  for k=0,lim do 
+  for k=0,lim do
     local t = loadstring(s..'}')()
     assert(#t == i)
     check(t, fb(i), mp2(k))
@@ -188,9 +188,16 @@ assert(table.foreachi({'a', 'b', 'c'}, function (i,v)
        end) == 'b')
 
 
+--eLua...
+if not rawget(_G,"print") then
+  print=print -- :-)
+end
+
 assert(print==find("print") and print == find1("print"))
 assert(_G["print"]==find("print"))
-assert(assert==find1("assert"))
+if not elua then
+  assert(assert==find1("assert"))
+end
 assert(nofind==find("return"))
 assert(not find1("return"))
 _G["ret" .. "urn"] = nil

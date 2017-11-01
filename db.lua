@@ -1,5 +1,13 @@
 -- testing debug library
 
+local stime
+if tmr then
+  stime=tmr.read()
+end
+
+local myname=debug.getinfo(1,"S").short_src
+print("running from file: "..myname)
+
 local function dostring(s) return assert(loadstring(s))() end
 
 print"testing debug library and debug information"
@@ -25,9 +33,12 @@ do
   local a = debug.getinfo(print)
   assert(a.what == "C" and a.short_src == "[C]")
   local b = debug.getinfo(test, "SfL")
-  assert(b.name == nil and b.what == "Lua" and b.linedefined == 11 and
-         b.lastlinedefined == b.linedefined + 10 and
-         b.func == test and not string.find(b.short_src, "%["))
+
+  assert(b.name == nil)
+  assert(b.what == "Lua") -- and -- b.linedefined == 11 and
+  assert(b.lastlinedefined == b.linedefined + 10) -- and
+  assert(b.func == test)
+  assert(string.find(b.short_src, myname))
   assert(b.activelines[b.linedefined + 1] and
          b.activelines[b.lastlinedefined])
   assert(not b.activelines[b.linedefined] and
@@ -182,7 +193,7 @@ function f(a,b)
   assert(debug.setlocal(2, 4, "maçã") == "B")
   x = debug.getinfo(2)
   assert(x.func == g and x.what == "Lua" and x.name == 'g' and
-         x.nups == 0 and string.find(x.source, "^@.*db%.lua"))
+         x.nups == 0 ) -- and string.find(x.source, "^@.*db%.lua"))
   glob = glob+1
   assert(debug.getinfo(1, "l").currentline == L+1)
   assert(debug.getinfo(1, "l").currentline == L+2)
@@ -241,7 +252,7 @@ end
 function g(a,b) return (a+1) + f() end
 
 assert(g(0,0) == 30)
- 
+
 
 debug.sethook(nil);
 assert(debug.gethook() == nil)
@@ -257,7 +268,7 @@ debug.sethook(function (e)
   dostring("XX = 12")  -- test dostring inside hooks
   -- testing errors inside hooks
   assert(not pcall(loadstring("a='joao'+1")))
-  debug.sethook(function (e, l) 
+  debug.sethook(function (e, l)
     assert(debug.getinfo(2, "l").currentline == l)
     local f,m,c = debug.gethook()
     assert(e == "line")
@@ -308,8 +319,10 @@ assert(t.a == 1 and t.b == 2 and t.c == 3)
 assert(debug.setupvalue(foo1, 1, "xuxu") == "b")
 assert(({debug.getupvalue(foo2, 3)})[2] == "xuxu")
 -- cannot manipulate C upvalues from Lua
-assert(debug.getupvalue(io.read, 1) == nil)  
-assert(debug.setupvalue(io.read, 1, 10) == nil)  
+if type(io.read)=="function" then -- skip test when io.read is not a function (eLua)
+  assert(debug.getupvalue(io.read, 1) == nil)
+  assert(debug.setupvalue(io.read, 1, 10) == nil)
+end
 
 
 -- testing count hooks
@@ -396,6 +409,7 @@ assert(string.find(debug.traceback(), "^stack traceback:\n"))
 local function checktraceback (co, p)
   local tb = debug.traceback(co)
   local i = 0
+
   for l in string.gmatch(tb, "[^\n]+\n?") do
     assert(i == 0 or string.find(l, p[i]))
     i = i+1
@@ -411,7 +425,7 @@ end
 
 local co = coroutine.create(f)
 coroutine.resume(co, 3)
-checktraceback(co, {"yield", "db.lua", "tail", "tail", "tail"})
+checktraceback(co, {"yield", myname, "tail", "tail", "tail"})
 
 
 co = coroutine.create(function (x)
@@ -497,3 +511,6 @@ assert(type(debug.getregistry()) == "table")
 
 print"OK"
 
+if tmr then
+  print(string.format("runtime %8.3f sec",tmr.getdiffnow(nil,stime)/(10^6)))
+end
